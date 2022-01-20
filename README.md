@@ -11,7 +11,8 @@ This guide will show you how to install suckless' [dwm](https://dwm.suckless.org
 
 
 <!--ts-->
-   * 1 [Build Enviroment](#build-enviroment)
+   * 0 [Security Warning](#security-warning)
+   * 1 [Build Environment](#build-environment)
    * 2 [Downloading dwm](#downloading-dwm)
    * 3 [Modifying dwm](#modifying-dwm)
      * 3.1 [Adding qubesdecorations](#adding-qubesdecorations)
@@ -22,41 +23,52 @@ This guide will show you how to install suckless' [dwm](https://dwm.suckless.org
      * 6.1 [Automatic login](#automatic-login)
      * 6.2 [Applying dwm rules based on label and qube name](#applying-dwm-rules-based-on-label-and-qube-name)
      * 6.3 [Better fullscreen mode](#better-fullscreen-mode)
-     * 6.4 [Launching domU applications via dmenu](#launching-applications-via-dmenu)
+     * 6.4 [Launching domU applications via dmenu](#launching-domu-applications-via-dmenu)
      * 6.5 [Managing QubesOS via dmenu](#managing-qubesos-via-dmenu)
      * 6.6 [Quick-starting domU terminals](#quick-starting-domu-terminals)
      * 6.7 [Systray](#systray)
+     * 6.8 [Tor Browser and window tiling](#tor-browser-and-window-tiling)
    * [Author](#author)
 <!--te-->
 
 
 
-# Build Enviroment
+# Security Warning
 
-As we need to compile dwm ourselves in order to modify it, we need to get some tools and create suitable work-environment. Therefore we will create a domU qube for the sole purpose of modifying and compiling dwm.
-This has the benefit of not needing to install all the developement- and version control tools inside dom0 and it also massively lessens the amount of files that we have to copy to dom0.
+Manually installing software in dom0 has the potential to compromise your entire QubesOS installation.
+
+Exercise extreme caution.
+
+
+
+# Build Environment
+
+As we need to compile dwm ourselves in order to modify it, we need to get some tools and create a suitable work-environment. Therefore we will create a domU qube for the sole purpose of modifying and compiling dwm.
+This has the benefit of not having to install all the developement- and version control tools inside dom0 and it also massively lessens the amount of files that we have to copy to dom0.
 
 First, create an AppVM- or StandaloneVM qube which is able to connect to the internet, based on a known good, free from proprietary software, TemplateVM qube.
-This guide will use a debian-based StandaloneVM qube, called "build-dwm". 
+
+This guide will use a StandaloneVM qube called "build-dwm".
+
 You must ensure that the TemplateVM qube that this qube is based on is secure. If you create it as an AppVM qube, you also have to ensure that its TemplateVM qube _stays_ secure, as you might come back to modify and recompile your setup.
-Do not use this qube for anything else! Failing to prevent this qube from getting compromised will open the door for a targeted attack to compromise your complete system!
+Do not use this qube for anything else! Failing to prevent this qube from getting compromised will open the door for a targeted attack to compromise your entire system!
 Use the [Qubes firewall](https://qubes-os.org/doc/firewall) to secure it against unwanted and unneccessary connections.
 
+
 Optionally, it is possible to further shield "build-dwm" by isolating it completely from any networking and refrain from installing any networking related or otherwise unnessecary software inside it.
-Using a fresh DiposableVM qube, started from a known good TemplateVM qube, you can download dwm and your selected patches,
+Using a fresh DiposableVM qube, started from a known good TemplateVM qube, you can download dwm and your preferred patches,
 [copy](https://qubes-os.org/doc/copying-files) them to "build-dwm" and proceed from there.
 If you are not able to adjust your procedure according to this short explanation when following further along,
 I urge you to aquire a better understanding of the QubesOS internals before making any non-trivial modifications to dom0!
 
-Install the build dependencies:
 
-    [@build-dwm ~]# apt install libx11-dev libxft-dev libxinerama-dev
+Install the build dependencies, developement- and version control tools:
 
+    [arch-user@build-dwm]# pacman -S libx11 libxft libxinerama make tcc git
 
-Install the version control and build tools:
+    [debian-user@build-dwm]# apt install libx11-dev libxft-dev libxinerama-dev make tcc git
 
-    [@build-dwm ~]# apt install git make tcc
-
+    [fedora-user@build-dwm]# dnf install libX11-devel libXft-devel libXinerama-devel make tcc git
 
 
 # Downloading dwm
@@ -80,9 +92,9 @@ Switch to your personal branch:
 
 
 
-## Adding qubesdecorations
+### Adding qubesdecorations
 
-The qubesdecorations patch enables dwm to read QubesOS specific windowproperties and use the windowborders, titlebar and tagbar to indicate to the user what qube the focused window belongs to.
+The [qubesdecorations](https://github.com/3o14r473/dwm-qubesdecorations.diff) patch enables dwm to read QubesOS specific windowproperties and use the windowborders, titlebar and tagbar to indicate to the user what qube the focused window belongs to.
 
 Download and apply the qubesdecorations patch:
 
@@ -96,15 +108,15 @@ Download and apply the qubesdecorations patch:
 
 
 Now we have a dwm build that is able to indicate to the user what window belongs to which qube.
-The colorscheme for each qubelabel can be configured inside config.def.h.
+The colorscheme for each qubelabel can be configured inside `config.def.h`.
 
 So far, this is a very minimal setup and most readers probably want to atleast follow [6.2](#applying-dwm-rules-based-on-label-and-qube-name), [6.3](#better-fullscreen-mode), [6.4](#launching-applications-via-dmenu)
-and [6.6](#quick-starting-domu-terminals) down below in the Tips and tricks section.
+and [6.6](#quick-starting-domu-terminals) down below in the tips and tricks section.
 Feel free to further configure this build before proceeding, but it is possible to come back here at any point in time to adjust and recompile the latest iteration of your personal dwm build.
 
 
 
-## Maintaining dwm configuration and customization in git
+### Maintaining dwm configuration and customization in git
 
 Whenever you want to modify or update your dwm configuration, simply boot up your build-dwm qube and follow the same procedure we use above.
 Recording your changes with git makes for a great overview of your modifications and lets you experiment with your setup.
@@ -118,32 +130,32 @@ If you want to revert any changes introduced by a patch or your own doing, you a
 
 Compile the binary:
 
-    [@build-dwm ~/Desktop/dwm]# make clean install
+    [@build-dwm ~/Desktop/dwm]$ make clean dwm
 
 Copy it to dom0:
 
-    [@dom0 ~]$ qvm-run --pass-io --no-color-output build-dwm 'cat /usr/local/bin/dwm' > /tmp/dwm
+    [@dom0]$ qvm-run --pass-io --no-color-output build-dwm 'cat /home/user/Desktop/dwm/dwm' > /tmp/dwm
 
-    [@dom0 ~]# cp /tmp/dwm /usr/local/bin/dwm
+    [@dom0]# cp /tmp/dwm /usr/local/bin/dwm
 
-    [@dom0 ~]# chmod 755 /usr/local/bin/dwm   # This step can be skipped when reinstalling
+    [@dom0]# chmod 755 /usr/local/bin/dwm   # This step can be skipped when reinstalling
 
 
 
 # Starting dwm
 
-This guide will use [xinit](https://en.wikipedia.org/wiki/xinit) to start dwm. Feel free to use a display manager or any other method instead.
+This guide will show you how to use [xinit](https://en.wikipedia.org/wiki/xinit) to start dwm. Feel free to use a display manager or any other method instead, but you will have to look it up yourself.
 
 
 Create a file called `.xinitrc` inside your home directory in dom0 with the following contents:
 
 	#!/bin/sh
 
-	for i in /etc/xdg/autostart/*.desktop; do
+	for file in /etc/xdg/autostart/*.desktop; do
 
-		if ! grep -q "OnlyShowIn=" "$1"; then
+		if ! grep -q "OnlyShowIn=" "$file"; then
 
-			$(grep "^Exec=" "$1" | cut -c 6-)&
+			$(grep "^Exec=" "$file" | cut -c 6-)&
 		fi
 	done
 
@@ -161,18 +173,18 @@ Make it executable:
 
     [@dom0 ~]$ chmod +x .xinitrc
 
-You can [customize your .xinitrc to run any programs on X server startup.](https://wiki.archlinux.org/index.php/Xinit#xinitrc). Use this to start programs like a notification daemon and to apply configuration options at startup for example.
+You can [customize your .xinitrc to run any programs on X server startup](https://wiki.archlinux.org/index.php/Xinit#xinitrc). Use this to start programs like a notification daemon and to apply configuration options at startup for example.
 
 Furthermore, as dwm reads from the root window's name to print arbitrary status text, a simple while loop, forked to the background, inside .xinitrc, can be utilized to [dynamically update](https://wiki.archlinux.org/index.php/Dwm#Statusbar_configuration) this status text.
 
 
 Disable LightDM:
 
-    [@dom0 ~]# systemctl disable lightdm
+    [@dom0]# systemctl disable lightdm
 
 
 
-...and done :)
+***...and done :)***
 
 Reboot and either [autostart X at login](https://wiki.archlinux.org/index.php/Xinit#Autostart_X_at_login) or manually start it with the `startx` command.
 
@@ -188,7 +200,7 @@ If you use xinit, you can [automatically](https://wiki.archlinux.org/title/Getty
 
 ## Applying dwm rules based on label and qube name
 
-Apply [this](https://github.com/3o14r473/dwm-qubesrules.diff) patch to allow dwm to use label and qube name in its rulematching.
+Use the [qubesrules](https://github.com/3o14r473/dwm-qubesrules.diff) patch to allow dwm to use label and qube name in its rulematching.
 
 
 
@@ -201,14 +213,15 @@ ensuring that there are always clearly marked decorations drawn by the trusted w
 In XFCE, you can always put a window into fullscreen mode using the trusted window manager by right-clicking on a window’s title bar and selecting “Fullscreen” or pressing <alt+f11>.
 In my opinion, this is very cumbersome. Atleast in practice I have experienced it very often as pretty clunky.
 
-But thanks to [Jan Hendrik Farr](farrjanhendrik@aol.de), we can apply the [fakefullscreen](https://dwm.suckless.org/patches/fakefullscreen/) patch to enable dwm to handle fullscreened windows in a sane way.
-Originally intended to [enable](whichshoulddefinitelybethedefault...) dwm to display applications in their respective fullscreen mode inside windows of varying size, this patch lends itself immaculately for this QubesOS specific need.
+But thanks to [Jan Hendrik Farr](farrjanhendrik@aol.de) and [Sebastian LaVine](mail@smlavine.com), we can apply the [fakefullscreen patch](https://dwm.suckless.org/patches/fakefullscreen/) to enable dwm to handle fullscreened windows in a sane way.
+Originally intended to enable dwm to display applications in their respective fullscreen mode inside windows of varying size, this patch lends itself immaculately for this QubesOS specific need.
 With this patch, dwm only allows applications to enter fullscreen mode inside their assigned window areas in which they still have to obey whatever the trusted window manager,
 and thus the user, dictates them to.
-While preventing windows from "owning" the whole screen via fullscreen mode, fullscreened windows can still be effortlessly and very quickly moved and resized as one wishes, using the comfy dwm mechanics.
+While preventing windows from "owning" the whole screen via fullscreen mode, windows can still be effortlessly and very quickly put into fullscreen mode.
+As an additional benefit, fullscreened windows can be moved and resized as one wishes, using the comfy dwm mechanics.
 
 
-After applying this patch, [enable](https://www.qubes-os.org/doc/full-screen-mode/#enabling-full-screen-mode-for-select-vms-1) fullscreen mode globally.
+After applying this patch, [enable fullscreen mode globally](https://www.qubes-os.org/doc/full-screen-mode/#enabling-full-screen-mode-for-select-vms-1).
 And remember to disable this again, whenever you intend to switch to another window manager!
 
 
@@ -230,7 +243,7 @@ To keep your fingers on the keyboard, you can use [qmenu-vm](https://github.com/
 By default, <MODKEY+Return> will have dwm try to spawn st in dom0. But you certainly want to spawn st, or other terminal emulators, in many different domU qubes.
 One such way is by spawning a terminal emulator inside a qube, based on what qube the currently focused window belongs to.
 
-If you want to use the same terminal emulator for every domU qube, you can go with this little script:
+If you want to use the same type of terminal emulator for every domU qube, you can go with this little script:
 
 	#!/bin/sh
 
@@ -249,7 +262,7 @@ Use it as follows:
     /usr/local/bin/qxterm [dom0 terminal emulator] [domU terminal emulator]
 
 
-If you intend to use different terminal emulators for some domU qubes, you will have to use something more complex like this: 
+If you intend to use different types of terminal emulators for some domU qubes, you will have to use something more complex like this:
 
 	#!/bin/sh
 
@@ -278,6 +291,21 @@ Use it as follows:
 ## Systray
 
 dwm comes without a systray, you can use [this](https://dwm.suckless.org/patches/systray/) patch to implement one.
+
+
+
+## Tor Browser and window tiling
+
+Even with the addition of letterboxing, constantly resizing the Tor Browser in specific ways greatly impairs its resistance to fingerprinting.
+You should use the dwm rules inside `config.def.h` to have it default to floating mode:
+
+    /* class         instance    title       tags mask     isfloating   monitor */
+    { "Tor Browser", NULL,       NULL,       0,            1,           -1 },
+
+Respectively:
+
+    /* label qube    class         instance    title       tags mask     isfloating   monitor */
+    {  0,    NULL,  "Tor Browser", NULL,       NULL,       0,            1,           -1 },
 
 
 
